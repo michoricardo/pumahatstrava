@@ -4,10 +4,7 @@ Este proyecto documenta un enfoque de OSINT aplicado a Strava usando la interfaz
 
 Archivos principales:
 - `activitiespointschecker.js`: script para consola del navegador que recolecta actividades y extrae puntos de inicio y fin.
-- `followerschecker.js`: prueba previa usando paginacion UI para comparar followers y following.
 - `map_loop_demo.html`: visualizador local para cargar CSV y analizar clusters geograficos.
-- `sample_points.csv`: dataset sintetico para demo del visualizador.
-- `strava_tool_build_story.md`: guion corto de narrativa para la charla.
 
 ## Objetivo
 

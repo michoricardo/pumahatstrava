@@ -1,0 +1,7 @@
+strava_activity_points.csv
+strava_activity_points.geojson
+strava_activity_points_google_maps.html
+
+*.tmp
+Thumbs.db
+Desktop.ini
