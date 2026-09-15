@@ -4,7 +4,6 @@ Este proyecto documenta un enfoque de OSINT aplicado a Strava usando la interfaz
 
 Archivos principales:
 - `activitiespointschecker.js`: script para consola del navegador que recolecta actividades y extrae puntos de inicio y fin.
-- `map_loop_demo.html`: visualizador local para cargar CSV y analizar clusters geograficos.
 
 ## Objetivo
 
