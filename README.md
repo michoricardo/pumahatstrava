@@ -1,6 +1,6 @@
 # Strava UI Activity Points Extractor
 
-Este proyecto documenta un enfoque de OSINT aplicado a Strava usando la interfaz web en vez de la API oficial. La idea no es depender de un plan de pago ni de tokens de API, sino demostrar que un investigador puede diseñar un flujo reproducible a partir de superficies visibles en UI, rutas accesibles y artefactos derivados como GPX.
+Este proyecto documenta un enfoque de OSINT aplicado a Strava usando la interfaz web en vez de la API oficial. La idea no es depender de un plan de pago ni de tokens de API, sino demostrar que un investigador puede diseñar un flujo reproducible a partir de la vista semanal del perfil, navegando por intervalos `YYYYWW` y usando GPX solo como evidencia de respaldo cuando hace falta.
 
 Archivos principales:
 - `activitiespointschecker.js`: script para consola del navegador que recolecta actividades y extrae puntos de inicio y fin.
@@ -16,7 +16,9 @@ Extraer puntos de inicio y termino de actividades visibles desde Strava para:
 ## Como se ejecuta
 
 1. Inicia sesion en Strava en el navegador.
-2. Abre una vista del atleta o tu vista de training.
+2. Abre exactamente la vista que vas a analizar:
+   - `https://www.strava.com/athlete/training` si usaras `me`
+   - `https://www.strava.com/athletes/ATHLETE_ID` si usaras un ID numerico
 3. Abre DevTools.
 4. Ve a la pestaña Console.
 5. Copia el contenido completo de `activitiespointschecker.js`.
@@ -27,28 +29,27 @@ Extraer puntos de inicio y termino de actividades visibles desde Strava para:
    - `strava_activity_points.geojson`
    - `strava_activity_points_google_maps.html`
 
-Sugerencia de vista inicial:
-- `https://www.strava.com/athlete/training`
-- o una vista de atleta con semana concreta, por ejemplo:
+Vista semanal de ejemplo:
 - `https://www.strava.com/athletes/71555238#interval?interval=202632&interval_type=week&chart_type=miles&year_offset=0`
 
 Nota importante:
-- la parte despues de `#` es un fragmento del navegador y no siempre se envia al servidor.
-- por eso el script no depende solo del fragmento, sino que intenta rutas equivalentes con parametros y otras superficies HTML/JSON.
+- la parte despues de `#` es un fragmento del navegador y no se envia al servidor.
+- por eso este script no intenta pedir semanas al backend con muchas rutas distintas.
+- en vez de eso, cambia el `hash` en la pestaña actual, espera a que la UI muestre esa semana y extrae las actividades visibles de esa vista.
 
 ## Que significa cada prompt
 
-### `How many activities to inspect?`
+### `How many matching activities to inspect?`
 
-Cuantas actividades maximo quieres procesar.
+Cuantas actividades maximo quieres conservar y extraer dentro de las semanas pedidas.
 
 Ejemplo:
-- `60` significa: aunque el script encuentre mas, solo procesara hasta 60.
+- `20` significa: aunque encuentre mas actividades visibles al navegar semanas, solo conservara y extraera hasta 20 que si caigan en esas semanas.
 
 Si pones mas actividades de las que existen:
 - no pasa nada malo,
 - el script simplemente recolecta todas las que encuentre y se detiene,
-- el total real queda limitado por lo que haya disponible en esas semanas o rutas.
+- el total real queda limitado por lo que haya disponible en esas semanas.
 
 Si pones menos actividades de las que existen:
 - el script corta antes,
@@ -110,18 +111,16 @@ Cuando usar un numero:
 - si quieres demostrar navegacion de perfil concreto,
 - o si la vista del atleta expone mejor las actividades desde UI.
 
-### `Interval year (YYYY), optional`
+### `Interval year (YYYY)`
 
 Ano base para construir intervalos semanales del tipo `YYYYWW`.
 
 Ejemplo:
 - `2026`
 
-Si lo dejas vacio:
-- el script no genera ese loop por semanas,
-- y depende mas de la pagina actual y de rutas genericas de recoleccion.
+Es obligatorio en la estrategia actual porque el loop solo navega por semanas.
 
-### `Start week (1-53), optional`
+### `Start week (1-53)`
 
 Semana inicial del ano para construir el intervalo.
 
@@ -167,13 +166,14 @@ Limitaciones:
 - el GPX puede no existir o no estar disponible,
 - si no hay ruta, no hay inicio o fin geograficamente utiles.
 
-### `Enable diagnostics logs for collection troubleshooting?`
+### `Enable diagnostics logs?`
 
 Activa logs adicionales.
 
 Sirve para ver:
-- que rutas se estan intentando,
-- cuantos IDs salieron por fuente,
+- que semana esta navegando,
+- cuantos IDs visibles detecto en cada semana,
+- cuales actividades fueron descartadas por estar fuera de las semanas pedidas,
 - donde hubo errores,
 - si hubo reintentos por rate limit.
 
@@ -193,7 +193,7 @@ No es un problema. El comportamiento esperado es:
 ### Si pides menos actividades de las que realmente existen
 
 Tampoco es un problema. El script:
-- recolecta mas actividades potenciales,
+- sigue navegando por las semanas pedidas,
 - pero corta el resultado al maximo configurado.
 
 Esto es util si quieres:
@@ -244,21 +244,26 @@ Desde la perspectiva OSINT, eso es importante:
 
 El loop principal es:
 
-1. Collect
-- intenta sacar activity IDs desde la pagina actual,
-- prueba rutas HTML y una ruta tipo JSON,
-- opcionalmente recorre semanas `YYYYWW`.
+1. Navigate
+- parte de la vista del atleta ya abierta,
+- cambia el `hash` a cada semana `YYYYWW`,
+- espera a que Strava pinte la vista semanal.
 
-2. Extract
+2. Collect
+- toma los `activityId` visibles en esa semana desde la UI actual,
+- deduplica IDs entre semanas.
+
+3. Extract
 - abre cada actividad,
 - intenta extraer `start_latlng` y `end_latlng` del HTML.
 
-3. Validate
+4. Validate
+- verifica que la actividad realmente pertenezca a una de las semanas pedidas,
 - si faltan coordenadas, intenta fallback GPX,
 - valida rangos de lat/lon,
 - genera muestra y bbox.
 
-4. Export
+5. Export
 - genera CSV,
 - genera GeoJSON,
 - genera un HTML con enlaces agrupados a Google Maps,
@@ -292,6 +297,7 @@ Columnas actuales:
 - `activityId`
 - `title`
 - `startDateLocal`
+- `yearWeek`
 - `startLat`
 - `startLon`
 - `endLat`
