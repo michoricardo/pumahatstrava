@@ -4,6 +4,8 @@ Este proyecto documenta un enfoque de OSINT aplicado a Strava usando la interfaz
 
 Archivos principales:
 - `activitiespointschecker.js`: script para consola del navegador que recolecta actividades y extrae puntos de inicio y fin.
+- `activitiespointschecker_polyline.js`: variante experimental que intenta recuperar puntos desde HTML y polyline cuando no quieres depender de GPX.
+- `strava_ratelimit_probe.js`: probe simple para inspeccionar si una respuesta expone `Retry-After` o headers de cuota.
 
 ## Objetivo
 
@@ -17,7 +19,6 @@ Extraer puntos de inicio y termino de actividades visibles desde Strava para:
 
 1. Inicia sesion en Strava en el navegador.
 2. Abre exactamente la vista que vas a analizar:
-   - `https://www.strava.com/athlete/training` si usaras `me`
    - `https://www.strava.com/athletes/ATHLETE_ID` si usaras un ID numerico
 3. Abre DevTools.
 4. Ve a la pestaña Console.
@@ -91,23 +92,22 @@ Casos tipicos:
 - `500`, `502`, `503`, `504`: errores temporales del backend o gateway.
 
 Ejemplo:
-- `2` significa que intentara hasta dos veces extra antes de fallar definitivamente.
+- `1` significa que intentara una vez extra antes de fallar definitivamente.
 
 Si el servidor devuelve un error no reintentable:
 - el script lo marca como fallo y sigue con otras partes del flujo cuando aplica.
 
-### `Athlete ID (number) or 'me'`
+Recomendacion practica:
+- para `429`, usa `0` o `1`.
+- reintentar demasiadas veces puede empeorar el bloqueo, sobre todo en `export_gpx`.
+
+### `Athlete ID (number)`
 
 Define de quien intentar recolectar actividades.
 
-Opciones:
-- `me`: usa superficies de tu propia sesion.
-- un numero: intenta rutas del atleta especifico, por ejemplo `71555238`.
+Usa un numero, por ejemplo `71555238`.
 
-Cuando usar `me`:
-- si estas trabajando con tu cuenta logueada.
-
-Cuando usar un numero:
+Cuando usarlo:
 - si quieres demostrar navegacion de perfil concreto,
 - o si la vista del atleta expone mejor las actividades desde UI.
 
@@ -165,6 +165,8 @@ Limitaciones:
 - actividades de fuerza o gym pueden no tener GPX util,
 - el GPX puede no existir o no estar disponible,
 - si no hay ruta, no hay inicio o fin geograficamente utiles.
+- el rate limiting puede depender de la sesion o cuenta usada, no solo del script.
+- si Strava devuelve `429`, conviene detener la corrida y reintentar mas tarde en vez de insistir.
 
 ### `Enable diagnostics logs?`
 
@@ -287,7 +289,18 @@ Buenas practicas:
 - prueba primero con pocas actividades,
 - usa semanas con running o cycling outdoor,
 - evita hacer corridas muy largas repetidas una tras otra,
-- si ves `429`, espera un rato antes de relanzar.
+- si ves `429`, espera un rato antes de relanzar,
+- trata `export_gpx` como la parte mas sensible del flujo.
+
+Valores mas prudentes para GPX:
+- `maxActivities = 10`
+- `maxRetries = 0` o `1`
+- `gpxDelayMs = 8000` a `15000`
+
+Nota sobre limites:
+- este proyecto no usa la API oficial de Strava.
+- por eso no siempre recibiras headers como `X-RateLimit-*` o `Retry-After`.
+- cuando no aparezcan, no hay una cuenta regresiva exacta disponible desde la respuesta.
 
 ## Salidas
 
@@ -298,6 +311,10 @@ Columnas actuales:
 - `title`
 - `startDateLocal`
 - `yearWeek`
+- `collectedYearWeek`
+- `ownerAthleteId`
+- `collectedOwnerHintAthleteId`
+- `ownerStatus`
 - `startLat`
 - `startLon`
 - `endLat`
@@ -311,6 +328,11 @@ Interpretacion de `source`:
 - `activity_page`: salio desde HTML de la actividad.
 - `activity_page+gpx`: hizo falta usar GPX para completar la evidencia.
 - `error`: fallo la extraccion de esa actividad.
+
+Interpretacion de `ownerStatus`:
+- `match`: la actividad coincide con el atleta objetivo.
+- `unknown`: no hubo suficiente metadata para afirmarlo con certeza.
+- `mismatch`: la actividad fue descartada por pertenecer a otro atleta.
 
 Interpretacion de `ok`:
 - `true`: obtuvo inicio, fin o ambos.
@@ -336,6 +358,33 @@ Como usarlo:
 Nota:
 - Google Maps via URL tiene limites practicos de longitud y cantidad de waypoints,
 - por eso el script divide los puntos en mapas por lote cuando hace falta.
+
+## Script auxiliares
+
+### `activitiespointschecker_polyline.js`
+
+Sirve para probar una superficie menos dependiente de GPX.
+
+Que hace:
+- recorre semanas igual que el extractor principal,
+- intenta leer coordenadas desde HTML o polyline,
+- exporta CSV, GeoJSON y un HTML de mapa cuando encuentra puntos validos.
+
+Cuando usarlo:
+- si quieres medir cuanto recuperas sin tocar `export_gpx`,
+- o si quieres comparar cobertura entre HTML y GPX.
+
+### `strava_ratelimit_probe.js`
+
+Sirve para inspeccionar una URL concreta de Strava y ver si la respuesta expone:
+- `Retry-After`
+- `X-RateLimit-*`
+- algun otro indicio util de cuota
+
+Importante:
+- no evita limites,
+- no desbloquea sesiones,
+- solo ayuda a diagnosticar si el servidor expone informacion util.
 
 ## Relacion con la charla
 
