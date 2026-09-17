@@ -28,6 +28,7 @@ Extraer puntos de inicio y termino de actividades visibles desde Strava para:
 8. Espera a que se descarguen:
    - `strava_activity_points.csv`
    - `strava_activity_points.geojson`
+   - `strava_activity_points_map.html`
    - `strava_activity_points_google_maps.html`
 
 Vista semanal de ejemplo:
@@ -268,6 +269,7 @@ El loop principal es:
 5. Export
 - genera CSV,
 - genera GeoJSON,
+- genera un HTML con todos los puntos en un solo mapa,
 - genera un HTML con enlaces agrupados a Google Maps,
 - lista puntos para visualizar en mapa.
 
@@ -358,6 +360,78 @@ Como usarlo:
 Nota:
 - Google Maps via URL tiene limites practicos de longitud y cantidad de waypoints,
 - por eso el script divide los puntos en mapas por lote cuando hace falta.
+
+### HTML de mapa unico
+
+El archivo `strava_activity_points_map.html` abre todos los puntos detectados en un solo mapa usando Leaflet.
+
+Que resuelve:
+- no trata tus puntos como si fueran un viaje con escalas,
+- no convierte los puntos en waypoints intermedios,
+- permite ver todos los inicios y finales del chequeo en una sola vista.
+- no depende de tiles externos para funcionar como archivo local.
+
+Que muestra:
+- puntos de inicio en azul,
+- puntos de fin en rojo,
+- un segmento corto entre inicio y fin cuando una actividad tiene ambos.
+
+### HTML para geojson.io
+
+El archivo `strava_activity_points_geojsonio.html` automatiza la carga del GeoJSON en `geojson.io` usando una URL con el contenido embebido.
+
+Que resuelve:
+- evita importar el archivo manualmente,
+- abre los puntos como capa GeoJSON,
+- mantiene colores distintos para `start` y `end` cuando el visor los respeta.
+
+Limitacion:
+- si el dataset crece mucho, la URL puede ser demasiado larga para el navegador.
+
+## Otras herramientas para ver los puntos
+
+Si no quieres usar `geojson.io`, estas son las opciones mas utiles:
+
+### QGIS
+
+Sirve para cargar `strava_activity_points.geojson` como capa local.
+
+Ventajas:
+- no depende del navegador,
+- permite simbologia por atributo,
+- puedes colorear por `pointType`, `yearWeek` o `activityId`,
+- sirve mejor si luego quieres clusters, buffers o mapas para presentar.
+
+### Google My Maps
+
+Sirve para importar `CSV` o `GeoJSON` como marcadores, no como ruta de navegacion.
+
+Ventajas:
+- mas simple que QGIS,
+- facil de compartir,
+- no trata los puntos como viaje intermedio igual que Google Maps Directions.
+
+### uMap
+
+Sirve para subir `GeoJSON` y verlo sobre capas de OpenStreetMap en un mapa compartible.
+
+Ventajas:
+- rapido,
+- soporta capas y estilos,
+- bueno para demos ligeras en navegador.
+
+### kepler.gl
+
+Sirve para cargar `GeoJSON` o `CSV` y explorar visualmente muchos puntos.
+
+Ventajas:
+- muy bueno para densidad, agrupacion y patrones,
+- util si luego quieres contar inicios y finales por zona.
+
+Recomendacion practica:
+- para una demo rapida: `geojson.io` o `Google My Maps`
+- para analisis serio: `QGIS`
+- para exploracion visual de muchos puntos: `kepler.gl`
 
 ## Script auxiliares
 
